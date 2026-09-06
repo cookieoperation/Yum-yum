@@ -1,0 +1,386 @@
+let places = [];
+let map, markersLayer;
+
+// --- Tabs ---
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    if (btn.dataset.tab === 'map') setTimeout(() => map.invalidateSize(), 50);
+  });
+});
+
+// --- Map setup ---
+
+function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([38.9, -77.03], 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    maxZoom: 19
+  }).addTo(map);
+  markersLayer = L.layerGroup().addTo(map);
+}
+
+function iconFor(type) {
+  const colors = { restaurant: '#B08D57', home: '#5C6E4A', hotel: '#A5433A' };
+  const glyphs = { restaurant: '&#127860;', home: '&#8962;', hotel: '&#128716;' };
+  return L.divIcon({
+    className: 'place-marker',
+    html: `<div style="
+      background:${colors[type]};
+      width:30px;height:30px;border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 2px 6px rgba(0,0,0,0.35);
+      border:2px solid white;
+    "><span style="transform:rotate(45deg);font-size:14px;">${glyphs[type]}</span></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 28],
+    popupAnchor: [0, -28]
+  });
+}
+
+function renderMap() {
+  markersLayer.clearLayers();
+  const bounds = [];
+  places.forEach(p => {
+    const marker = L.marker([p.lat, p.lng], { icon: iconFor(p.type) });
+    const favs = p.favorites.length
+      ? `<p class="popup-favorites">${escapeHtml(p.favorites.join(', '))}</p>`
+      : '';
+    const photo = p.photos[0]
+      ? `<img src="/media/place/photo/${p.id}/${p.photos[0]}" style="width:100%;border-radius:3px;margin-top:0.4rem;max-height:120px;object-fit:cover;">`
+      : '';
+    marker.bindPopup(`<div class="popup-title">${escapeHtml(p.name)}</div>${favs}${photo}`);
+    marker.addTo(markersLayer);
+    bounds.push([p.lat, p.lng]);
+  });
+  if (bounds.length) {
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+  }
+}
+
+// --- Data loading ---
+
+async function loadPlaces() {
+  const res = await fetch('/api/places');
+  places = await res.json();
+  renderMap();
+  renderPlacesList();
+}
+
+// --- Places list (Places tab) ---
+
+function renderPlacesList() {
+  const container = document.getElementById('places-list');
+  const restaurants = places.filter(p => p.type === 'restaurant')
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const home = places.find(p => p.type === 'home');
+  const hotel = places.find(p => p.type === 'hotel');
+
+  container.innerHTML = '';
+
+  [home, hotel].filter(Boolean).forEach(p => container.appendChild(renderPlaceCard(p, false)));
+
+  if (!restaurants.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = `<div class="stamp">No restaurants yet</div><p>Add the first one your family loved.</p>`;
+    container.appendChild(empty);
+  } else {
+    restaurants.forEach(p => container.appendChild(renderPlaceCard(p, true)));
+  }
+}
+
+function renderPlaceCard(p, withFavorites) {
+  const card = document.createElement('div');
+  card.className = 'place-card';
+
+  const badge = p.type === 'restaurant' ? '' :
+    `<span class="place-badge ${p.type}">${p.type}</span><br>`;
+
+  card.innerHTML = `
+    <div class="place-card-head">
+      <div>
+        ${badge}
+        <h3 class="place-name">${escapeHtml(p.name)}</h3>
+        ${p.address ? `<p class="place-address">${escapeHtml(p.address)}</p>` : ''}
+      </div>
+      <div class="place-actions">
+        <button class="btn-text edit-btn">Edit</button>
+        <button class="btn-text btn-danger delete-btn">Delete</button>
+      </div>
+    </div>
+  `;
+
+  if (withFavorites) {
+    const favSection = document.createElement('div');
+    favSection.className = 'favorites-section';
+    favSection.innerHTML = `<p class="favorites-label">Family favorites</p>`;
+
+    const tags = document.createElement('div');
+    tags.className = 'favorites-tags';
+    p.favorites.forEach(f => {
+      const tag = document.createElement('span');
+      tag.className = 'favorite-tag';
+      tag.innerHTML = `${escapeHtml(f)} <button data-fav="${escapeHtml(f)}">&times;</button>`;
+      tag.querySelector('button').addEventListener('click', () => removeFavorite(p.id, f));
+      tags.appendChild(tag);
+    });
+    favSection.appendChild(tags);
+
+    const addRow = document.createElement('div');
+    addRow.className = 'add-favorite-row';
+    addRow.innerHTML = `<input type="text" placeholder="Add a dish they loved" />
+      <button class="btn btn-quiet">Add</button>`;
+    const input = addRow.querySelector('input');
+    const addBtn = addRow.querySelector('button');
+    const submit = () => {
+      if (input.value.trim()) {
+        addFavorite(p.id, input.value.trim());
+        input.value = '';
+      }
+    };
+    addBtn.addEventListener('click', submit);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+    favSection.appendChild(addRow);
+
+    const photoGrid = document.createElement('div');
+    photoGrid.className = 'photo-grid';
+    p.photos.forEach(filename => {
+      const thumb = document.createElement('div');
+      thumb.className = 'photo-thumb';
+      thumb.innerHTML = `<img src="/media/place/photo/${p.id}/${filename}" alt="${escapeHtml(p.name)} photo">
+        <button class="remove-photo">&times;</button>`;
+      thumb.querySelector('img').addEventListener('click', () => openLightbox(`/media/place/photo/${p.id}/${filename}`));
+      thumb.querySelector('.remove-photo').addEventListener('click', () => removePhoto(p.id, filename));
+      photoGrid.appendChild(thumb);
+    });
+    const uploadLabel = document.createElement('label');
+    uploadLabel.className = 'photo-upload-label';
+    uploadLabel.innerHTML = `+<input type="file" accept="image/*" multiple hidden>`;
+    uploadLabel.querySelector('input').addEventListener('change', e => uploadPhotos(p.id, e.target.files));
+    photoGrid.appendChild(uploadLabel);
+    favSection.appendChild(photoGrid);
+
+    card.appendChild(favSection);
+  }
+
+  card.querySelector('.edit-btn').addEventListener('click', () => openEditModal(p));
+  card.querySelector('.delete-btn').addEventListener('click', () => deletePlace(p));
+
+  return card;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// --- Actions ---
+
+async function addFavorite(id, item) {
+  const p = places.find(x => x.id === id);
+  const favorites = [...p.favorites, item];
+  await fetch(`/api/places/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ favorites })
+  });
+  await loadPlaces();
+}
+
+async function removeFavorite(id, item) {
+  const p = places.find(x => x.id === id);
+  const favorites = p.favorites.filter(f => f !== item);
+  await fetch(`/api/places/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ favorites })
+  });
+  await loadPlaces();
+}
+
+async function uploadPhotos(id, fileList) {
+  const formData = new FormData();
+  Array.from(fileList).forEach(f => formData.append('photos', f));
+  await fetch(`/api/places/${id}/photos`, { method: 'POST', body: formData });
+  await loadPlaces();
+}
+
+async function removePhoto(id, filename) {
+  await fetch(`/api/places/${id}/photos/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+  await loadPlaces();
+}
+
+async function deletePlace(p) {
+  if (!confirm(`Remove ${p.name}? This deletes its photos too.`)) return;
+  await fetch(`/api/places/${p.id}`, { method: 'DELETE' });
+  await loadPlaces();
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.remove('hidden');
+}
+document.getElementById('lightbox').addEventListener('click', () => {
+  document.getElementById('lightbox').classList.add('hidden');
+});
+
+// --- Modal: add / edit place ---
+
+const backdrop = document.getElementById('modal-backdrop');
+const modalContent = document.getElementById('modal-content');
+document.getElementById('modal-close').addEventListener('click', closeModal);
+backdrop.addEventListener('click', e => { if (e.target === backdrop) closeModal(); });
+
+function closeModal() {
+  backdrop.classList.add('hidden');
+  modalContent.innerHTML = '';
+}
+
+function openAddModal(type) {
+  const titles = { restaurant: 'Add a restaurant', home: 'Set home location', hotel: 'Set hotel location' };
+  modalContent.innerHTML = `
+    <h2>${titles[type]}</h2>
+    <form id="place-form">
+      <div class="field">
+        <label>Name</label>
+        <input type="text" name="name" required placeholder="${type === 'restaurant' ? "e.g. Luigi's Trattoria" : type === 'home' ? 'Home' : 'Hotel name'}">
+      </div>
+      <div class="geocode-row">
+        <div class="field">
+          <label>Address</label>
+          <input type="text" name="address" placeholder="Street, city, state">
+        </div>
+        <button type="button" class="btn btn-quiet" id="lookup-btn">Look up</button>
+      </div>
+      <p class="hint" id="geocode-hint">We'll turn the address into map coordinates.</p>
+      <div class="field-row">
+        <div class="field">
+          <label>Latitude</label>
+          <input type="text" name="lat" id="lat-input" required>
+        </div>
+        <div class="field">
+          <label>Longitude</label>
+          <input type="text" name="lng" id="lng-input" required>
+        </div>
+      </div>
+      ${type === 'restaurant' ? `
+      <div class="field">
+        <label>Family favorites (comma separated)</label>
+        <input type="text" name="favorites" placeholder="Carbonara, tiramisu">
+      </div>` : ''}
+      <div class="modal-actions">
+        <button type="button" class="btn btn-quiet" id="cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  `;
+  backdrop.classList.remove('hidden');
+
+  document.getElementById('cancel-btn').addEventListener('click', closeModal);
+  document.getElementById('lookup-btn').addEventListener('click', async () => {
+    const address = modalContent.querySelector('[name="address"]').value.trim();
+    const hint = document.getElementById('geocode-hint');
+    if (!address) { hint.textContent = 'Type an address first.'; hint.className = 'hint error'; return; }
+    hint.textContent = 'Looking up…';
+    hint.className = 'hint';
+    try {
+      const res = await fetch('/api/geocode', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address })
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      document.getElementById('lat-input').value = data.lat.toFixed(6);
+      document.getElementById('lng-input').value = data.lng.toFixed(6);
+      hint.textContent = `Found: ${data.display_name}`;
+      hint.className = 'hint success';
+    } catch {
+      hint.textContent = "Couldn't find that address — enter coordinates directly instead.";
+      hint.className = 'hint error';
+    }
+  });
+
+  document.getElementById('place-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const favorites = type === 'restaurant'
+      ? (fd.get('favorites') || '').split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    await fetch('/api/places', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type,
+        name: fd.get('name'),
+        address: fd.get('address'),
+        lat: fd.get('lat'),
+        lng: fd.get('lng'),
+        favorites
+      })
+    });
+    closeModal();
+    await loadPlaces();
+  });
+}
+
+function openEditModal(p) {
+  modalContent.innerHTML = `
+    <h2>Edit ${p.type === 'restaurant' ? 'restaurant' : p.type}</h2>
+    <form id="edit-form">
+      <div class="field">
+        <label>Name</label>
+        <input type="text" name="name" required value="${escapeHtml(p.name)}">
+      </div>
+      <div class="field">
+        <label>Address</label>
+        <input type="text" name="address" value="${escapeHtml(p.address || '')}">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Latitude</label>
+          <input type="text" name="lat" required value="${p.lat}">
+        </div>
+        <div class="field">
+          <label>Longitude</label>
+          <input type="text" name="lng" required value="${p.lng}">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-quiet" id="cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  `;
+  backdrop.classList.remove('hidden');
+  document.getElementById('cancel-btn').addEventListener('click', closeModal);
+  document.getElementById('edit-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    await fetch(`/api/places/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: fd.get('name'), address: fd.get('address'),
+        lat: fd.get('lat'), lng: fd.get('lng')
+      })
+    });
+    closeModal();
+    await loadPlaces();
+  });
+}
+
+document.getElementById('add-restaurant-btn').addEventListener('click', () => openAddModal('restaurant'));
+document.getElementById('set-home-btn').addEventListener('click', () => openAddModal('home'));
+document.getElementById('set-hotel-btn').addEventListener('click', () => openAddModal('hotel'));
+
+// --- Init ---
+
+initMap();
+loadPlaces();
