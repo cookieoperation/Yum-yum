@@ -1,0 +1,17 @@
+{
+  "name": "family-restaurant-map",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A private family restaurant journal — favorite dishes, photos, and a map with only your own pins.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.0.1"
+  }
+}
