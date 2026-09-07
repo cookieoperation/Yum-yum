@@ -8,7 +8,13 @@ function switchTab(tab) {
   document.querySelectorAll('.md-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById(`tab-${tab}`).classList.add('active');
-  if (tab === 'map') setTimeout(() => map.invalidateSize(), 50);
+  if (tab === 'map') {
+  setTimeout(() => {
+    if (map) {
+      map.resize();
+    }
+  }, 50);
+}
 }
 
 document.querySelectorAll('.md-tab').forEach(btn => {
@@ -71,41 +77,135 @@ function initMap() {
 }
 
 function iconFor(type) {
-  const colors = { restaurant: '#1A73E8', home: '#1E8E3E', hotel: '#E37400' };
-  const glyphs = { restaurant: 'restaurant', home: 'home', hotel: 'hotel' };
-  return L.divIcon({
-    className: 'place-marker',
-    html: `<div style="
+  const colors = {
+    restaurant: '#1A73E8',
+    home: '#1E8E3E',
+    hotel: '#E37400'
+  };
+
+  const glyphs = {
+    restaurant: 'restaurant',
+    home: 'home',
+    hotel: 'hotel'
+  };
+
+  const el = document.createElement('div');
+
+  el.className = 'place-marker';
+
+  el.innerHTML = `
+    <div style="
       background:${colors[type]};
-      width:34px;height:34px;border-radius:50% 50% 50% 0;
+      width:34px;
+      height:34px;
+      border-radius:50% 50% 50% 0;
       transform:rotate(-45deg);
-      display:flex;align-items:center;justify-content:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       box-shadow:0 1px 4px rgba(0,0,0,0.4);
       border:2px solid white;
-    "><span class="material-symbols-rounded" style="transform:rotate(45deg);font-size:18px;color:white;">${glyphs[type]}</span></div>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 32],
-    popupAnchor: [0, -30]
-  });
+    ">
+      <span
+        class="material-symbols-rounded"
+        style="
+          transform:rotate(45deg);
+          font-size:18px;
+          color:white;
+        "
+      >
+        ${glyphs[type]}
+      </span>
+    </div>
+  `;
+
+  return el;
 }
 
 function renderMap() {
-  markersLayer.clearLayers();
+  // Remove existing MapLibre markers
+  markers.forEach(marker => marker.remove());
+  markers = [];
+
   const bounds = [];
+
   places.forEach(p => {
-    const marker = L.marker([p.lat, p.lng], { icon: iconFor(p.type) });
+    const element = iconFor(p.type);
+
+    const marker = new maplibregl.Marker({
+      element: element,
+      anchor: 'bottom'
+    })
+      .setLngLat([Number(p.lng), Number(p.lat)]);
+
     const favs = p.favorites.length
-      ? `<p class="popup-favorites">${escapeHtml(p.favorites.join(', '))}</p>`
+      ? `
+        <p class="popup-favorites">
+          ${escapeHtml(p.favorites.join(', '))}
+        </p>
+      `
       : '';
+
     const photo = p.photos[0]
-      ? `<img src="/media/place/photo/${p.id}/${p.photos[0]}" style="width:100%;border-radius:3px;margin-top:0.4rem;max-height:120px;object-fit:cover;">`
+      ? `
+        <img
+          src="/media/place/photo/${p.id}/${p.photos[0]}"
+          style="
+            width:100%;
+            border-radius:3px;
+            margin-top:0.4rem;
+            max-height:120px;
+            object-fit:cover;
+          "
+          alt="${escapeHtml(p.name)}"
+        >
+      `
       : '';
-    marker.bindPopup(`<div class="popup-title">${escapeHtml(p.name)}</div>${favs}${photo}`);
-    marker.addTo(markersLayer);
-    bounds.push([p.lat, p.lng]);
+
+    const popup = new maplibregl.Popup({
+      offset: 35
+    }).setHTML(`
+      <div class="popup-title">
+        ${escapeHtml(p.name)}
+      </div>
+
+      ${favs}
+
+      ${photo}
+    `);
+
+    marker.setPopup(popup);
+
+    marker.addTo(map);
+
+    markers.push(marker);
+
+    bounds.push([
+      Number(p.lng),
+      Number(p.lat)
+    ]);
   });
-  if (bounds.length) {
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+
+  // Automatically frame all places
+  if (bounds.length === 1) {
+    map.flyTo({
+      center: bounds[0],
+      zoom: 15,
+      essential: true
+    });
+  }
+
+  if (bounds.length > 1) {
+    const mapBounds = new maplibregl.LngLatBounds();
+
+    bounds.forEach(point => {
+      mapBounds.extend(point);
+    });
+
+    map.fitBounds(mapBounds, {
+      padding: 40,
+      maxZoom: 15
+    });
   }
 }
 
