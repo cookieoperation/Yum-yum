@@ -1,0 +1,10 @@
+services:
+  family-restaurant-map:
+    build: .
+    container_name: family-restaurant-map
+    restart: unless-stopped
+    ports:
+      - "4025:4025"
+    volumes:
+      - ./media:/media/place/photo
+      - ./data:/app/data
