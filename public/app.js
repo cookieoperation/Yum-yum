@@ -1,5 +1,6 @@
 let places = [];
-let map, markersLayer;
+let map;
+let markers = [];
 
 // --- Tabs ---
 
@@ -20,13 +21,53 @@ document.getElementById('fab-add').addEventListener('click', () => openAddModal(
 
 // --- Map setup ---
 
+// --- Map setup ---
+
 function initMap() {
-  map = L.map('map', { zoomControl: true }).setView([38.9, -77.03], 12);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 19
-  }).addTo(map);
-  markersLayer = L.layerGroup().addTo(map);
+  map = new maplibregl.Map({
+    container: 'map',
+
+    center: [-77.03, 38.9],
+    zoom: 12,
+
+    style: {
+      version: 8,
+
+      sources: {
+        carto: {
+          type: 'raster',
+
+          tiles: [
+            'https://{a-c}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
+          ],
+
+          tileSize: 256,
+
+          attribution:
+            '&copy; OpenStreetMap contributors &copy; CARTO'
+        }
+      },
+
+      layers: [
+        {
+          id: 'carto-tiles',
+
+          type: 'raster',
+
+          source: 'carto',
+
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    }
+  });
+
+  // Navigation controls
+  map.addControl(
+    new maplibregl.NavigationControl(),
+    'top-right'
+  );
 }
 
 function iconFor(type) {
