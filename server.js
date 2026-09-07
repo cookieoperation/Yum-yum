@@ -20,7 +20,15 @@ function savePlaces(places) {
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve the frontend and explicitly handle the root route so Render always
+// returns the app instead of falling through to a plain "Not Found" response.
+const PUBLIC_PATH = path.join(__dirname, 'public');
+app.use(express.static(PUBLIC_PATH));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
+});
+
 app.use('/media/place/photo', express.static(MEDIA_PATH));
 
 const storage = multer.diskStorage({
@@ -142,7 +150,7 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Family restaurant map running at http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Family restaurant map running on port ${PORT}`);
   console.log(`Photos are stored under ${MEDIA_PATH}`);
 });
