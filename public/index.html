@@ -3,76 +3,198 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
 <title>Our Table</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/3.6.2/maplibre-gl.css" />
+
+<!-- MapLibre GL JS -->
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/3.6.2/maplibre-gl.css"
+/>
+
+<!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" />
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0" rel="stylesheet" />
+<link
+  href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap"
+  rel="stylesheet"
+>
+
+<!-- Material Symbols -->
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded"
+/>
+
+<link
+  href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0"
+  rel="stylesheet"
+/>
+
 <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
 <main>
+
+  <!-- MAP TAB -->
   <section id="tab-map" class="tab-panel active">
+
     <div id="map"></div>
 
     <div class="search-bar">
-      <span class="material-symbols-rounded search-icon">restaurant</span>
+      <span class="material-symbols-rounded search-icon">
+        restaurant
+      </span>
+
       <div class="search-text">
         <span class="search-title">Our Table</span>
-        <span class="search-subtitle">Your family's own map</span>
+        <span class="search-subtitle">
+          Your family's own map
+        </span>
       </div>
     </div>
 
     <nav class="md-tabs" role="tablist">
-      <button class="md-tab active" data-tab="map" role="tab">
-        <span class="material-symbols-rounded">map</span>Map
+
+      <button
+        class="md-tab active"
+        data-tab="map"
+        role="tab"
+      >
+        <span class="material-symbols-rounded">map</span>
+        Map
       </button>
-      <button class="md-tab" data-tab="places" role="tab">
-        <span class="material-symbols-rounded">list</span>Places
+
+      <button
+        class="md-tab"
+        data-tab="places"
+        role="tab"
+      >
+        <span class="material-symbols-rounded">list</span>
+        Places
       </button>
+
     </nav>
 
-    <button class="fab" id="fab-add" aria-label="Add a restaurant">
+    <button
+      class="fab"
+      id="fab-add"
+      aria-label="Add a restaurant"
+    >
       <span class="material-symbols-rounded">add</span>
     </button>
+
   </section>
 
+
+  <!-- PLACES TAB -->
   <section id="tab-places" class="tab-panel">
+
     <div class="places-top-bar">
-      <button class="icon-btn" id="places-back-btn" aria-label="Back to map">
-        <span class="material-symbols-rounded">arrow_back</span>
+
+      <button
+        class="icon-btn"
+        id="places-back-btn"
+        aria-label="Back to map"
+      >
+        <span class="material-symbols-rounded">
+          arrow_back
+        </span>
       </button>
-      <span class="places-top-title">Places</span>
+
+      <span class="places-top-title">
+        Places
+      </span>
+
     </div>
+
+
     <div class="places-toolbar">
-      <button id="add-restaurant-btn" class="chip-btn chip-btn-filled">
-        <span class="material-symbols-rounded">restaurant</span>Add restaurant
+
+      <button
+        id="add-restaurant-btn"
+        class="chip-btn chip-btn-filled"
+      >
+        <span class="material-symbols-rounded">
+          restaurant
+        </span>
+        Add restaurant
       </button>
-      <button id="set-home-btn" class="chip-btn">
-        <span class="material-symbols-rounded">home</span>Home
+
+      <button
+        id="set-home-btn"
+        class="chip-btn"
+      >
+        <span class="material-symbols-rounded">
+          home
+        </span>
+        Home
       </button>
-      <button id="set-hotel-btn" class="chip-btn">
-        <span class="material-symbols-rounded">hotel</span>Hotel
+
+      <button
+        id="set-hotel-btn"
+        class="chip-btn"
+      >
+        <span class="material-symbols-rounded">
+          hotel
+        </span>
+        Hotel
       </button>
+
     </div>
-    <div id="places-list" class="places-list"></div>
+
+
+    <div
+      id="places-list"
+      class="places-list"
+    ></div>
+
   </section>
+
 </main>
 
-<div id="modal-backdrop" class="modal-backdrop hidden">
+
+<!-- MODAL -->
+<div
+  id="modal-backdrop"
+  class="modal-backdrop hidden"
+>
   <div class="modal">
-    <button class="modal-close" id="modal-close">&times;</button>
+
+    <button
+      class="modal-close"
+      id="modal-close"
+    >
+      &times;
+    </button>
+
     <div id="modal-content"></div>
+
   </div>
 </div>
 
-<div id="lightbox" class="lightbox hidden">
-  <img id="lightbox-img" src="" alt="" />
+
+<!-- LIGHTBOX -->
+<div
+  id="lightbox"
+  class="lightbox hidden"
+>
+  <img
+    id="lightbox-img"
+    src=""
+    alt=""
+  />
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<!-- MapLibre GL JS -->
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/3.6.2/maplibre-gl.js"
+></script>
+
+<!-- Our Table application -->
 <script src="app.js"></script>
+
 </body>
 </html>
