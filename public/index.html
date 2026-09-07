@@ -9,7 +9,7 @@
 <!-- MapLibre GL JS -->
 <link
   rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/3.6.2/maplibre-gl.css"
+  href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"
 />
 
 <!-- Fonts -->
@@ -87,7 +87,6 @@
 
   </section>
 
-
   <!-- PLACES TAB -->
   <section id="tab-places" class="tab-panel">
 
@@ -108,7 +107,6 @@
       </span>
 
     </div>
-
 
     <div class="places-toolbar">
 
@@ -144,54 +142,27 @@
 
     </div>
 
-
-    <div
-      id="places-list"
-      class="places-list"
-    ></div>
+    <div id="places-list" class="places-list"></div>
 
   </section>
 
 </main>
 
-
 <!-- MODAL -->
-<div
-  id="modal-backdrop"
-  class="modal-backdrop hidden"
->
+<div id="modal-backdrop" class="modal-backdrop hidden">
   <div class="modal">
-
-    <button
-      class="modal-close"
-      id="modal-close"
-    >
-      &times;
-    </button>
-
+    <button class="modal-close" id="modal-close">&times;</button>
     <div id="modal-content"></div>
-
   </div>
 </div>
 
-
 <!-- LIGHTBOX -->
-<div
-  id="lightbox"
-  class="lightbox hidden"
->
-  <img
-    id="lightbox-img"
-    src=""
-    alt=""
-  />
+<div id="lightbox" class="lightbox hidden">
+  <img id="lightbox-img" src="" alt="" />
 </div>
 
-
 <!-- MapLibre GL JS -->
-<script
-  src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/3.6.2/maplibre-gl.js"
-></script>
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 
 <!-- Our Table application -->
 <script src="app.js"></script>
